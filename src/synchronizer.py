@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 import os
-from parser import SubtitleFileParser
+from .parser import SubtitleFileParser
 
 # start_time = datetime.strptime(start_time_str, '%H:%M:%S,%f')
 # end_time = datetime.strptime(end_time_str, '%H:%M:%S,%f')
