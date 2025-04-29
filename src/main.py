@@ -1,9 +1,8 @@
 from parser import SubtitleFileParser
+from synchronizer import Synchronizer
 
 def main():
-    with SubtitleFileParser(r'examples\example_subtitle.srt') as sfp:
-        for _ in range(20):
-            print(sfp.get_line())
-
+    s = Synchronizer((0, 52, 2),r'C:\Users\nikolamaksic\Desktop\coding\subtitle-timing-synchronizer\examples\example_subtitle.srt')
+    s.process()
 if __name__=="__main__":
     main()
