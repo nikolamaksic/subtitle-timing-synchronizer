@@ -8,10 +8,11 @@ from .parser import SubtitleFileParser
 # end_time = datetime.strptime(end_time_str, '%H:%M:%S,%f')
 class Synchronizer:
 
-    def __init__(self, subtitle_delay_start_t, subtitle_delay, input_file, output_file=None):
+    def __init__(self, subtitle_delay_start_t, subtitle_delay, mode, input_file, output_file=None):
         self.subtitle_delay = subtitle_delay
         minute, second, microsecond = subtitle_delay_start_t
         self.subtitle_delay_start_t = time(hour=0, minute=minute, second=second, microsecond=microsecond)
+        self.mode = mode
         self.input_file = input_file
         self.output_file = output_file or self.create_output_file(input_file)
         self.file_parser = SubtitleFileParser(self.input_file)
@@ -19,7 +20,7 @@ class Synchronizer:
     def create_output_file(self, input_file): 
         folder, filename = os.path.split(input_file)
         name, ext = os.path.splitext(filename)
-        new_filename = f"{name}_fixed{ext}"
+        new_filename = f"{name}_synchronized{ext}"
         return os.path.join(folder, new_filename)
 
     def get_datetime(self, t):
@@ -31,8 +32,10 @@ class Synchronizer:
     def get_delayed_line(self, start_t, end_t):
         m, s, ms = self.subtitle_delay
 
-        new_start_t = self.datetime_str_format(start_t + timedelta(minutes=m, seconds=s, milliseconds=ms))
-        new_end_t = self.datetime_str_format(end_t + timedelta(minutes=m, seconds=s, milliseconds=ms))
+        new_start_t = self.datetime_str_format(start_t + \
+            (self.mode)*timedelta(minutes=m, seconds=s, milliseconds=ms))
+        new_end_t = self.datetime_str_format(end_t + \
+            (self.mode)*timedelta(minutes=m, seconds=s, milliseconds=ms))
         new_line = f"{new_start_t} --> {new_end_t}\n"
         return new_line
 
