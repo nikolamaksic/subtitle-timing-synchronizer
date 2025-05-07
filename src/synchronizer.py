@@ -1,6 +1,6 @@
 
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import os
 from .parser import SubtitleFileParser
 
@@ -8,8 +8,10 @@ from .parser import SubtitleFileParser
 # end_time = datetime.strptime(end_time_str, '%H:%M:%S,%f')
 class Synchronizer:
 
-    def __init__(self, title_delay, input_file, output_file=None):
-        self.title_delay = title_delay
+    def __init__(self, subtitle_delay_start_t, subtitle_delay, input_file, output_file=None):
+        self.subtitle_delay = subtitle_delay
+        minute, second, microsecond = subtitle_delay_start_t
+        self.subtitle_delay_start_t = time(hour=0, minute=minute, second=second, microsecond=microsecond)
         self.input_file = input_file
         self.output_file = output_file or self.create_output_file(input_file)
         self.file_parser = SubtitleFileParser(self.input_file)
@@ -20,29 +22,35 @@ class Synchronizer:
         new_filename = f"{name}_fixed{ext}"
         return os.path.join(folder, new_filename)
 
+    def get_datetime(self, t):
+        return datetime.strptime(t, '%H:%M:%S,%f')
+
+    def datetime_str_format(self, t_str):
+        return f"{t_str.strftime('%H:%M:%S')},{int(t_str.microsecond / 1000):03d}"
+
     def get_delayed_line(self, start_t, end_t):
-        start_time = datetime.strptime(start_t, '%H:%M:%S,%f')
-        end_time = datetime.strptime(end_t, '%H:%M:%S,%f')
-        m, s, ms = self.title_delay
+        m, s, ms = self.subtitle_delay
 
-        new_start_t = start_time + timedelta(minutes=m, seconds=s, milliseconds=ms)
-        new_end_t = end_time + timedelta(minutes=m, seconds=s, milliseconds=ms)
-
-        new_line = (
-            f"{new_start_t.strftime('%H:%M:%S')},{int(new_start_t.microsecond / 1000):03d} --> "
-            f"{new_end_t.strftime('%H:%M:%S')},{int(new_end_t.microsecond / 1000):03d}\n"
-        )
+        new_start_t = self.datetime_str_format(start_t + timedelta(minutes=m, seconds=s, milliseconds=ms))
+        new_end_t = self.datetime_str_format(end_t + timedelta(minutes=m, seconds=s, milliseconds=ms))
+        new_line = f"{new_start_t} --> {new_end_t}\n"
         return new_line
+
+    def get_updated_line(self, start_t, end_t, line):
+        if start_t and end_t:
+            start_time = self.get_datetime(start_t)
+            end_time = self.get_datetime(end_t)
+            if start_time.time() > self.subtitle_delay_start_t:
+                new_line = self.get_delayed_line(start_time, end_time)
+                return new_line
+        return line
 
     def process(self):
         with open(self.output_file, "w") as out_f:
             with self.file_parser as parser:
                 for line, start_t, end_t in parser:
-                    if start_t and end_t:
-                        new_line = self.get_delayed_line(start_t, end_t)
-                        out_f.write(new_line)
-                    else:
-                        out_f.write(line)
+                    new_line = self.get_updated_line(start_t, end_t, line)
+                    out_f.write(new_line)
 
 
 
