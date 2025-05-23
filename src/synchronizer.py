@@ -2,23 +2,34 @@
 
 from datetime import datetime, timedelta, time
 import os
-from .parser import SubtitleFileParser
+from parser import SubtitleFileParser
 
 # start_time = datetime.strptime(start_time_str, '%H:%M:%S,%f')
 # end_time = datetime.strptime(end_time_str, '%H:%M:%S,%f')
 class Synchronizer:
 
-    def __init__(self, subtitle_delay_start_t, subtitle_delay, mode, input_file, output_file=None):
+    def __init__(self, subtitle_delay_start_t: tuple = (0,0,0), subtitle_delay: \
+         tuple = (0,0,0), mode=1, input_file=None, output_file=None):
         self.subtitle_delay = subtitle_delay
         minute, second, microsecond = subtitle_delay_start_t
         self.subtitle_delay_start_t = time(hour=0, minute=minute, second=second, microsecond=microsecond)
         self.mode = mode
         self.input_file = input_file
-        self.output_file = output_file or self.create_output_file(input_file)
-        self.file_parser = SubtitleFileParser(self.input_file)
+        self._output_file  = output_file or self.create_output_file()
 
-    def create_output_file(self, input_file): 
-        folder, filename = os.path.split(input_file)
+    @property
+    def output_file(self):
+        return self._output_file 
+
+    @output_file.setter
+    def output_file(self, value):
+        print(value)
+        self._output_file  = value or self.create_output_file()
+
+    def create_output_file(self):
+        if not self.input_file:
+            return None
+        folder, filename = os.path.split(self.input_file)
         name, ext = os.path.splitext(filename)
         new_filename = f"{name}_synchronized{ext}"
         return os.path.join(folder, new_filename)
@@ -49,8 +60,12 @@ class Synchronizer:
         return line
 
     def process(self):
-        with open(self.output_file, "w") as out_f:
-            with self.file_parser as parser:
+        if not self._output_file:
+            self._output_file = self.create_output_file()
+        
+        file_parser = SubtitleFileParser(self.input_file)
+        with open(self._output_file, "w") as out_f:
+            with file_parser as parser:
                 for line, start_t, end_t in parser:
                     new_line = self.get_updated_line(start_t, end_t, line)
                     out_f.write(new_line)
